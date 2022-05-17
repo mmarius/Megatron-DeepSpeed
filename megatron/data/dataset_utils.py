@@ -36,7 +36,7 @@ from megatron.data.indexed_dataset import make_dataset as make_indexed_dataset
 
 DSET_TYPE_BERT = 'standard_bert'
 DSET_TYPE_ICT = 'ict'
-DSET_TYPE_T5  = 't5'
+DSET_TYPE_T5 = 't5'
 
 DSET_TYPES = [DSET_TYPE_BERT, DSET_TYPE_ICT, DSET_TYPE_T5]
 
@@ -68,7 +68,6 @@ def get_datasets_weights_and_num_samples(data_prefix,
         datasets_train_valid_test_num_samples.append(
             [int(math.ceil(val * weight * 1.005))
              for val in train_valid_test_num_samples])
-
 
     return prefixes, weights, datasets_train_valid_test_num_samples
 
@@ -305,14 +304,16 @@ def create_masked_lm_predictions(tokens,
                         masked_token = tokens[index]
                     # 10% of the time, replace with random word
                     else:
-                        masked_token = vocab_id_list[np_rng.randint(0, len(vocab_id_list))]
+                        masked_token = vocab_id_list[np_rng.randint(
+                            0, len(vocab_id_list))]
             elif masking_style == "t5":
                 masked_token = mask_id
             else:
                 raise ValueError("invalid value of masking style")
 
             output_tokens[index] = masked_token
-            masked_lms.append(MaskedLmInstance(index=index, label=tokens[index]))
+            masked_lms.append(MaskedLmInstance(
+                index=index, label=tokens[index]))
 
         masked_spans.append(MaskedLmInstance(
             index=index_set,
@@ -368,7 +369,8 @@ def create_masked_lm_predictions(tokens,
 
         for src_i, tgt_i in zip(select_indexes, permute_indexes):
             output_tokens[src_i] = orig_token[tgt_i]
-            masked_lms.append(MaskedLmInstance(index=src_i, label=orig_token[src_i]))
+            masked_lms.append(MaskedLmInstance(
+                index=src_i, label=orig_token[src_i]))
 
     masked_lms = sorted(masked_lms, key=lambda x: x.index)
     # Sort the spans by the index of the first span
@@ -565,7 +567,8 @@ def _build_train_valid_test_datasets(data_prefix, data_impl, splits_string,
                     **kwargs
                 )
             else:
-                raise NotImplementedError("Dataset type not fully implemented.")
+                raise NotImplementedError(
+                    "Dataset type not fully implemented.")
 
             # Set the original pointer so dataset remains the main dataset.
             indexed_dataset.set_doc_idx(doc_idx_ptr)
@@ -630,6 +633,7 @@ def get_train_valid_test_split_(splits_string, size):
     assert splits_index[-1] == size
     return splits_index
 
+
 def get_samples_mapping(indexed_dataset,
                         data_prefix,
                         num_epochs,
@@ -674,7 +678,7 @@ def get_samples_mapping(indexed_dataset,
         # Build samples mapping
         verbose = torch.distributed.get_rank() == 0
         start_time = time.time()
-        print_rank_0(' > building sapmles index mapping for {} ...'.format(
+        print_rank_0(' > building samples index mapping for {} ...'.format(
             name))
         # First compile and then import.
         from megatron.data import helpers
@@ -688,7 +692,7 @@ def get_samples_mapping(indexed_dataset,
             seed,
             verbose,
             2 if binary_head else 1)
-        print_rank_0(' > done building sapmles index maping')
+        print_rank_0(' > done building samples index maping')
         np.save(indexmap_filename, samples_mapping, allow_pickle=True)
         print_rank_0(' > saved the index mapping in {}'.format(
             indexmap_filename))
@@ -701,7 +705,8 @@ def get_samples_mapping(indexed_dataset,
     # parallel case
     counts = torch.cuda.LongTensor([1])
     torch.distributed.all_reduce(counts, group=mpu.get_data_parallel_group())
-    torch.distributed.all_reduce(counts, group=mpu.get_pipeline_model_parallel_group())
+    torch.distributed.all_reduce(
+        counts, group=mpu.get_pipeline_model_parallel_group())
     assert counts[0].item() == (
         torch.distributed.get_world_size() //
         torch.distributed.get_world_size(group=mpu.get_tensor_model_parallel_group()))
@@ -710,7 +715,8 @@ def get_samples_mapping(indexed_dataset,
     print_rank_0(' > loading indexed mapping from {}'.format(
         indexmap_filename))
     start_time = time.time()
-    samples_mapping = np.load(indexmap_filename, allow_pickle=True, mmap_mode='r')
+    samples_mapping = np.load(
+        indexmap_filename, allow_pickle=True, mmap_mode='r')
     print_rank_0('    loaded indexed file in {:3.3f} seconds'.format(
         time.time() - start_time))
     print_rank_0('    total number of samples: {}'.format(

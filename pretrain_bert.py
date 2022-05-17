@@ -51,7 +51,8 @@ def get_batch(data_iterator):
     """Build the batch."""
 
     # Items and their type.
-    keys = ['text', 'types', 'labels', 'is_random', 'loss_mask', 'padding_mask']
+    keys = ['text', 'types', 'labels',
+            'is_random', 'loss_mask', 'padding_mask']
     datatype = torch.int64
 
     # Broadcast data.

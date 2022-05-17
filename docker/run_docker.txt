@@ -1,0 +1,11 @@
+docker build -f ./docker/Dockerfile --build-arg USER_UID=$UID --build-arg USER_NAME=$(id -un) -t megatron-deepspeed:latest .
+
+######################
+#     AWS Server     #
+######################
+
+# run docker as user ubuntu
+docker run -it --rm --gpus=all --pid=host --ipc=host --user ubuntu \
+    -v /home/ubuntu/Megatron-DeepSpeed:/Megatron-DeepSpeed \
+    -v /mnt:/mnt \
+    megatron-deepspeed:latest

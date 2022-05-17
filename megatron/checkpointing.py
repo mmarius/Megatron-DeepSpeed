@@ -30,6 +30,7 @@ from megatron import (get_args,
 
 _CHECKPOINT_VERSION = None
 
+
 def set_checkpoint_version(value):
     global _CHECKPOINT_VERSION
     if _CHECKPOINT_VERSION is not None:
@@ -37,9 +38,11 @@ def set_checkpoint_version(value):
             "checkpoint versions do not match"
     _CHECKPOINT_VERSION = value
 
+
 def get_checkpoint_version():
     global _CHECKPOINT_VERSION
     return _CHECKPOINT_VERSION
+
 
 def check_checkpoint_args(checkpoint_args):
     """Ensure fixed arguments for a model are the same for the input
@@ -118,7 +121,7 @@ def save_checkpoint(iteration, model, optimizer, lr_scheduler):
         iteration, args.save))
 
     if not torch.distributed.is_initialized() or mpu.get_data_parallel_rank() == 0 \
-        or args.deepspeed:
+            or args.deepspeed:
 
         # Arguments, iteration, and model.
         state_dict = {}
@@ -134,8 +137,9 @@ def save_checkpoint(iteration, model, optimizer, lr_scheduler):
             else:
                 for i in range(len(model)):
                     mpu.set_virtual_pipeline_model_parallel_rank(i)
-                    state_dict['model%d' % i] = model[i].state_dict_for_save_checkpoint()
-            
+                    state_dict['model%d' %
+                               i] = model[i].state_dict_for_save_checkpoint()
+
             # Optimizer stuff.
             if not args.no_save_optim:
                 if optimizer is not None:
@@ -156,6 +160,7 @@ def save_checkpoint(iteration, model, optimizer, lr_scheduler):
         checkpoint_name = get_checkpoint_name(args.save, iteration)
         if not args.deepspeed:
             ensure_directory_exists(checkpoint_name)
+            print_rank_0(f"Saving checkpoint to {checkpoint_name}")
             torch.save(state_dict, checkpoint_name)
 
     if args.deepspeed:
@@ -182,6 +187,7 @@ def save_checkpoint(iteration, model, optimizer, lr_scheduler):
     # Wait so everyone is done (not necessary)
     if torch.distributed.is_initialized():
         torch.distributed.barrier()
+
 
 def _transpose_first_dim(t, num_splits, num_splits_first, model):
     input_shape = t.size()
@@ -213,7 +219,7 @@ def _transpose_first_dim(t, num_splits, num_splits_first, model):
         intermediate_shape = \
             (num_attention_heads_per_partition,
              hidden_size_per_attention_head, num_splits) +\
-             input_shape[1:]
+            input_shape[1:]
 
         t = t.view(*intermediate_shape)
         t = t.transpose(1, 2).contiguous()
@@ -221,35 +227,43 @@ def _transpose_first_dim(t, num_splits, num_splits_first, model):
 
     return t
 
+
 def fix_query_key_value_ordering(model, checkpoint_version):
     """Fix up query/key/value matrix ordering if checkpoint
     version is smaller than 2.0
     """
     if checkpoint_version < 2.0:
         if isinstance(model, list):
-            assert len(model)==1
+            assert len(model) == 1
             model = model[0]
         for name, param in model.named_parameters():
             if name.endswith(('.query_key_value.weight', '.query_key_value.bias')):
                 if checkpoint_version == 0:
-                    fixed_param = _transpose_first_dim(param.data, 3, True, model)
+                    fixed_param = _transpose_first_dim(
+                        param.data, 3, True, model)
                 elif checkpoint_version == 1.0:
-                    fixed_param = _transpose_first_dim(param.data, 3, False, model)
+                    fixed_param = _transpose_first_dim(
+                        param.data, 3, False, model)
                 else:
-                    print_rank_0(f"Invalid checkpoint version {checkpoint_version}.")
+                    print_rank_0(
+                        f"Invalid checkpoint version {checkpoint_version}.")
                     sys.exit()
                 param.data.copy_(fixed_param)
             if name.endswith(('.key_value.weight', '.key_value.bias')):
                 if checkpoint_version == 0:
-                    fixed_param = _transpose_first_dim(param.data, 2, True, model)
+                    fixed_param = _transpose_first_dim(
+                        param.data, 2, True, model)
                 elif checkpoint_version == 1.0:
-                    fixed_param = _transpose_first_dim(param.data, 2, False, model)
+                    fixed_param = _transpose_first_dim(
+                        param.data, 2, False, model)
                 else:
-                    print_rank_0(f"Invalid checkpoint version {checkpoint_version}.")
+                    print_rank_0(
+                        f"Invalid checkpoint version {checkpoint_version}.")
                     sys.exit()
                 param.data.copy_(fixed_param)
         print_rank_0(" succesfully fixed query-key-values ordering for"
-                    " checkpoint version {}".format(checkpoint_version))
+                     " checkpoint version {}".format(checkpoint_version))
+
 
 def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True):
     """Load a model checkpoint and return the iteration.
@@ -266,7 +280,7 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
             print_rank_0('WARNING: could not find the metadata file {} '.format(
                 load_dir))
             print_rank_0('    will not load any checkpoints and will start from '
-                        'random')
+                         'random')
             return 0
         release = False
     else:
@@ -280,7 +294,7 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
             print_rank_0('WARNING: could not find the metadata file {} '.format(
                 tracker_filename))
             print_rank_0('    will not load any checkpoints and will start from '
-                        'random')
+                         'random')
             return 0
 
         # Otherwise, read the tracker file and either set the iteration or
@@ -303,7 +317,8 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
 
         # Checkpoint.
         checkpoint_name = get_checkpoint_name(load_dir, iteration, release)
-        print_rank_0(f' loading checkpoint from {args.load} at iteration {iteration}')
+        print_rank_0(
+            f' loading checkpoint from {args.load} at iteration {iteration}')
 
         # Load the checkpoint.
         try:
@@ -365,7 +380,8 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
         else:
             for i in range(len(model)):
                 mpu.set_virtual_pipeline_model_parallel_rank(i)
-                model[i].load_state_dict(state_dict['model%d' % i], strict=strict)
+                model[i].load_state_dict(
+                    state_dict['model%d' % i], strict=strict)
 
     # Fix up query/key/value matrix ordering if needed
     checkpoint_version = get_checkpoint_version()
@@ -382,9 +398,9 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
                     lr_scheduler.load_state_dict(state_dict['lr_scheduler'])
             except KeyError:
                 print_rank_0('Unable to load optimizer from checkpoint {}. '
-                            'Specify --no-load-optim or --finetune to prevent '
-                            'attempting to load the optimizer state, '
-                            'exiting ...'.format(checkpoint_name))
+                             'Specify --no-load-optim or --finetune to prevent '
+                             'attempting to load the optimizer state, '
+                             'exiting ...'.format(checkpoint_name))
                 sys.exit()
 
     # rng states.
@@ -417,7 +433,7 @@ def load_checkpoint(model, optimizer, lr_scheduler, load_arg='load', strict=True
 
 
 def load_biencoder_checkpoint(model, only_query_model=False,
-        only_context_model=False, custom_load_path=None):
+                              only_context_model=False, custom_load_path=None):
     """
     selectively load retrieval models for indexing/retrieving 
     from saved checkpoints
