@@ -13,7 +13,7 @@ def main():
     # combine all train files in a single .json file
     train_files = glob.glob(os.path.join(DATA_DIR, "c4-train*.json.gz"))
     train_files.sort()
-    train_files = train_files[:10]
+    train_files = train_files[:10] # for now let's use the first 1o files only
 
     # read individual json samples
     samples = []
